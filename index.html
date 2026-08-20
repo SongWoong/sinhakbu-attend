@@ -71,6 +71,9 @@ tr.total td.y{background:#f7ecc9}
 tr.total td.p{background:#f4dfe5}
 tr.gisu-head td{background:var(--green-soft);font-weight:700;text-align:left;color:var(--green)}
 .rate{color:var(--accent);font-weight:700}
+tr.carried td{background:#f7f9fa}
+tr.carried td.y{background:#fbf6e6}
+tr.carried td.p{background:#faf1f3}
 .center-list{display:flex;flex-direction:column;gap:12px}
 .center-item{background:var(--card);backdrop-filter:blur(2px);border:1px solid var(--line);border-radius:12px;
   padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;
@@ -442,7 +445,8 @@ async function renderMonthly(){
   let reports, selHtml;
   if(state.mode==='date'){
     if(!META.dates.includes(state.date))state.date=META.dates[META.dates.length-1];
-    reports=(await api(`/api/daily?date=${state.date}`)).reports.filter(inCohort);
+    // 그날 안 낸 센터도 마지막 보고로 이어서 넣는다 → 표 합계가 추이 그래프와 일치
+    reports=(await api(`/api/asof?date=${state.date}`)).reports.filter(inCohort);
     selHtml=`<select onchange="state.date=this.value;render()">${META.dates.map(d=>`<option value="${d}" ${d===state.date?'selected':''}>${fmtDate(d)}</option>`).join('')}</select>`;
   }else{
     const ls=(await api('/api/lectures')).lectures;
@@ -466,7 +470,8 @@ async function renderMonthly(){
   <div class="panel">
     <h3>${fmtCohort(state.cohort)} 일일보고 (${state.mode==='date'?fmtDate(state.date):state.lecture+'강'})</h3>
     ${mainTable(reports,t)}
-  </div>`;
+  </div>
+  ${state.mode==='date'?`<div class="note">그날 보고가 없는 센터는 <b>마지막 보고 값</b>을 이어서 넣었습니다(회색 표시). 그래서 이 표의 계와 아래 추이 그래프 값이 같습니다.</div>`:''}`;
 
   html+=`<h2>출석률 추이 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">${fmtCohort(state.cohort)} 강의 합산 · 마지막 보고를 계속 이어감</span></h2>
   <div class="controls" id="trend-toggle"></div>
@@ -521,8 +526,8 @@ function mainTable(reports,t){
   <tr><th>센터</th><th>기수</th><th>총등록</th><th>실강<br>출석수</th><th>보강<br>출석수</th><th>출석수<br>(계)</th>
       <th>실강<br>출석률</th><th>출석률</th>
       <th class="y">목표<br>종강수</th><th class="y">목표<br>종강률</th><th class="p">전도수</th><th class="p">강사<br>심방수</th></tr>
-  ${reports.map(r=>`<tr class="clickable" onclick="openCenter('${r.gisu}','${r.center}')">
-    <td class="name">${r.center}<span class="small">${lec(r)} · ${r.instructor}</span></td>
+  ${reports.map(r=>`<tr class="clickable${r.carried?' carried':''}" onclick="openCenter('${r.gisu}','${r.center}')">
+    <td class="name">${r.center}<span class="small">${lec(r)} · ${r.instructor}${r.carried?` · <b style="color:var(--muted)">${fmtDate(r.date,true)} 보고 이어옴</b>`:''}</span></td>
     <td><span class="gisu-badge">${r.gisu}기</span></td>
     <td>${r.registered}</td><td>${r.live}</td><td>${r.makeup}</td><td><b>${r.attendance}</b></td>
     <td class="rate">${pct(r.live_rate)}</td><td class="rate">${pct(r.rate)}</td>
