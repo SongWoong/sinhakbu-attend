@@ -142,7 +142,7 @@ tr.clickable:hover td.p{background:#f6e3e9}
 <script>
 let META=null;
 let ROSTER=null;
-let state={month:null, mode:'date', date:null, lecture:null, view:'dash', gisu:null, center:null, reportId:null};
+let state={trendMode:'month', month:null, mode:'date', date:null, lecture:null, view:'dash', gisu:null, center:null, reportId:null};
 function go(v){state.view=v;render()}
 
 const pct=v=>v.toFixed(1)+'%';
@@ -202,7 +202,7 @@ function applyHash(){
   const h=decodeURIComponent(location.hash.slice(1));
   if(!h)return;
   const p=h.split('/');
-  if(p[0]==='monthly'){state.view='monthly';if(p[1])state.cohort=p[1];}
+  if(p[0]==='monthly'){state.view='monthly';if(p[1])state.cohort=p[1];if(p[2])state.trendMode=p[2];}
   else if(p[0]==='centers')state.view='centers';
   else if(p[0]==='center'&&p[2]){state.view='center';state.gisu=p[1];state.center=p[2];}
   else if(p[0]==='dash')state.view='dash';
@@ -309,11 +309,16 @@ async function drawTrendChart(cohort){
   const el=$('trend-chart');if(!el)return;
   const key=cohort||'all';
   if(!TREND[key])TREND[key]=(await api('/api/trend'+(cohort?'?start_month='+encodeURIComponent(cohort):''))).days;
-  // 날짜별 이어붙이기 시계열에서 "각 달의 마지막 날" 값만 추출 → 달별 추이
-  const byMonth={};
-  TREND[key].forEach(x=>{byMonth[x.date.slice(0,7)]=x});  // 날짜 오름차순이라 마지막 값이 남음
-  const data=Object.entries(byMonth).sort((a,b)=>a[0]<b[0]?-1:1)
-    .map(([m,x])=>({label:`${+m.split('-')[1]}월`, ...x}));
+  // 블록 단위 시계열. 달별 모드면 각 달의 마지막 블록 값만 뽑는다.
+  let data;
+  if(state.trendMode==='block'){
+    data=TREND[key].map(x=>({label:x.block, ...x}));
+  }else{
+    const byMonth={};
+    TREND[key].forEach(x=>{byMonth[x.date.slice(0,7)]=x});  // 블록 순서대로라 마지막 값이 남음
+    data=Object.entries(byMonth).sort((a,b)=>a[0]<b[0]?-1:1)
+      .map(([m,x])=>({label:`${+m.split('-')[1]}월`, ...x}));
+  }
   if(!data.length){el.innerHTML='<p class="note">데이터가 없습니다.</p>';return}
   const W=Math.max(el.clientWidth||900,480),H=300,L=52,R=24,T=30,B=44;
   const hi=Math.min(100,Math.ceil(Math.max(...data.map(d=>d.rate),10)/10)*10+10);
@@ -328,11 +333,11 @@ async function drawTrendChart(cohort){
   data.forEach((d,i)=>{
     const cx=L+slot*i+slot/2;
     const x1=cx-bw-3, x2=cx+3;
-    s+=`<rect x="${x1}" y="${Y(d.rate)}" width="${bw}" height="${Y(0)-Y(d.rate)}" rx="4" fill="#1a7183"><title>${d.label} 출석률 ${d.rate.toFixed(1)}% (${d.attendance}/${d.registered}, ${fmtDate(d.date,true)} 기준, ${d.reports}개 강의)</title></rect>`;
+    s+=`<rect x="${x1}" y="${Y(d.rate)}" width="${bw}" height="${Y(0)-Y(d.rate)}" rx="4" fill="#1a7183"><title>${d.label} 출석률 ${d.rate.toFixed(1)}% (${d.attendance}/${d.registered}) · 강의 ${d.reports}개 중 ${d.reported}개가 이 블록에 보고</title></rect>`;
     s+=`<text x="${x1+bw/2}" y="${Y(d.rate)-8}" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a7183">${d.rate.toFixed(1)}%</text>`;
     s+=`<rect x="${x2}" y="${Y(d.live_rate)}" width="${bw}" height="${Y(0)-Y(d.live_rate)}" rx="4" fill="#79b3bf"><title>${d.label} 실강 출석률 ${d.live_rate.toFixed(1)}%</title></rect>`;
     s+=`<text x="${x2+bw/2}" y="${Y(d.live_rate)-8}" text-anchor="middle" font-size="12" fill="#4b8a97">${d.live_rate.toFixed(1)}%</text>`;
-    s+=`<text x="${cx}" y="${H-18}" text-anchor="middle" font-size="13" fill="#425c63">${d.label}</text>`;
+    s+=`<text x="${cx}" y="${H-18}" text-anchor="middle" font-size="${data.length>6?10.5:13}" fill="#425c63">${d.label}</text>`;
   });
   s+=`<rect x="${W-R-205}" y="6" width="10" height="10" rx="2" fill="#1a7183"/><text x="${W-R-190}" y="15" font-size="12" fill="#425c63">출석률(실강+보강)</text>`;
   s+=`<rect x="${W-R-80}" y="6" width="10" height="10" rx="2" fill="#79b3bf"/><text x="${W-R-65}" y="15" font-size="12" fill="#425c63">실강 출석률</text>`;
@@ -430,8 +435,15 @@ async function renderMonthly(){
     ${mainTable(reports,t)}
   </div>`;
 
-  html+=`<h2>출석률 추이 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">${fmtCohort(state.cohort)} 강의 합산 · 달별 (각 달 마지막 보고 기준, 진행 중인 달은 최신)</span></h2>
-  <div class="chart-wrap"><div id="trend-chart"></div></div>`;
+  html+=`<h2>출석률 추이 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">${fmtCohort(state.cohort)} 강의 합산 · 블록(월화/수목/금토) 단위 집계</span></h2>
+  <div class="controls">
+    <div class="seg">
+      <button class="${state.trendMode!=='block'?'on':''}" onclick="state.trendMode='month';render()">달별</button>
+      <button class="${state.trendMode==='block'?'on':''}" onclick="state.trendMode='block';render()">블록별</button>
+    </div>
+  </div>
+  <div class="chart-wrap"><div id="trend-chart"></div></div>
+  <div class="note">한 블록 안에서는 마지막 보고가 그 블록의 값입니다(월요일만 올렸으면 월요일 값). 그 블록에 보고가 없는 센터는 직전 블록 값을 이어갑니다.</div>`;
 
   const mt=await api('/api/monthly_trend');
   const rows=mt.centers.filter(inCohort);
