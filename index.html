@@ -300,7 +300,32 @@ function renderDashboard(){
   </div>
   <h2>달별 출석률 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">개강월(텔레그램 달별 방) 기준</span></h2>
   <div class="chart-wrap"><div id="month-chart"></div></div>
-  <div class="note">각 강의의 개강월은 "센터별 출결 현황"에서 지정합니다. 지정 전에는 "개강월 미지정"으로 묶입니다.</div>`;
+  <div class="note">각 강의의 개강월은 "센터별 출결 현황"에서 지정합니다.</div>
+  ${missingPanel()}`;
+}
+
+/* ---------- 미보고 센터 (3회 이상 연속) ---------- */
+function missingPanel(){
+  if(!ROSTER)return '';
+  const MIN=3;
+  const list=ROSTER.centers
+    .filter(c=>c.missed_blocks===null||c.missed_blocks>=MIN)
+    .sort((a,b)=>(a.missed_blocks===null?999:a.missed_blocks)>(b.missed_blocks===null?999:b.missed_blocks)?-1:1);
+  const head=`<h2>미보고 센터 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">${MIN}회 이상 연속 미보고 · 수업 블록(월화/수목/금토) 기준</span></h2>`;
+  if(!list.length)
+    return head+`<div class="panel"><div style="text-align:center;color:var(--green);font-weight:700;padding:6px 0">
+      ✅ ${MIN}회 이상 연속 미보고 센터가 없습니다</div></div>`;
+  return head+`<div class="panel"><table style="min-width:0">
+    <tr><th>센터</th><th>개강월</th><th>연속 미보고</th><th>마지막 보고</th></tr>
+    ${list.map(c=>{
+      const never=c.missed_blocks===null;
+      return `<tr><td class="name">${c.label}</td>
+        <td><span class="gisu-badge">${+c.start_month.split('-')[1]}월</span></td>
+        <td style="color:var(--red);font-weight:700">${never?'한 번도 없음':c.missed_blocks+'회'}</td>
+        <td>${never?'-':fmtDate(c.last_date)}</td></tr>`;
+    }).join('')}
+    </table></div>
+  <div class="note">텔레그램 방에는 매일 21시·23시·자정에 미제출 안내가 계속 나갑니다.</div>`;
 }
 
 /* ---------- 출석률 추이 (달별, 개강월 필터 가능) ---------- */
