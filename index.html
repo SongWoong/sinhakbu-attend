@@ -80,6 +80,13 @@ tr.gisu-head td{background:var(--green-soft);font-weight:700;text-align:left;col
 .center-item .meta{color:var(--muted);font-size:13px;margin-top:4px}
 .center-item .rt{font-family:"Batang",serif;font-size:24px;font-weight:700;color:var(--green);text-align:right}
 .center-item .rt small{display:block;font-size:12px;color:var(--muted);font-family:inherit;font-weight:400}
+.sos{display:inline-block;background:#fdecea;color:#b3241a;border:1px solid #f0c2bc;
+  border-radius:8px;padding:3px 10px;font-size:12.5px;font-weight:700;margin-left:8px}
+.sos.warn{background:#fdf6e3;color:#8a6414;border-color:#eddfb4}
+.sos-panel{background:#fdecea;border:1px solid #f0c2bc;border-radius:12px;padding:16px 20px;margin-bottom:16px}
+.sos-panel h4{margin:0 0 10px;color:#b3241a;font-size:15px}
+.sos-row{font-size:14px;color:#5c3a36;padding:3px 0}
+.center-item.emergency{border-color:#e8a49c;background:rgba(255,248,247,.9)}
 .group-chip{display:inline-block;background:var(--green-soft);border:1px solid #cfe3e7;
   border-radius:8px;padding:4px 10px;margin-right:8px;font-size:13px;color:var(--ink)}
 .status-chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -134,11 +141,26 @@ tr.clickable:hover td.p{background:#f6e3e9}
 </div>
 <script>
 let META=null;
+let ROSTER=null;
 let state={month:null, mode:'date', date:null, lecture:null, view:'dash', gisu:null, center:null, reportId:null};
 function go(v){state.view=v;render()}
 
 const pct=v=>v.toFixed(1)+'%';
 const lec=r=>r.lecture_label||(r.lecture_no!=null?r.lecture_no+'강':'-');
+function sosOf(center,gisu){
+  if(!ROSTER)return null;
+  const hit=ROSTER.centers.find(x=>x.center===center&&(x.gisu==null||String(x.gisu)===String(gisu)));
+  if(!hit)return null;
+  return (hit.missed_blocks===null||hit.missed_blocks>0)?hit:null;
+}
+function sosBadge(x){
+  if(!x)return '';
+  if(x.missed_blocks===null)
+    return `<span class="sos" title="보고 이력 없음">🚨 보고 없음</span>`;
+  const cls=x.missed_blocks>=2?'sos':'sos warn';
+  const icon=x.missed_blocks>=2?'🚨':'⚠';
+  return `<span class="${cls}" title="마지막 보고 ${x.last_date||'없음'}">${icon} ${x.missed_blocks}블록 미제출</span>`;
+}
 const $=id=>document.getElementById(id);
 function msg(t,ok){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');
   setTimeout(()=>{m.className='msg'},6000)}
@@ -187,6 +209,7 @@ function applyHash(){
 }
 async function loadAll(){
   META=await api('/api/meta');
+  try{ROSTER=await api('/api/roster_status')}catch(e){ROSTER=null}
   TREND={};
   applyHash();
   if(!META.months.length){$('app').innerHTML='<p class="note" style="margin-top:40px">아직 데이터가 없습니다. 엑셀을 업로드해 주세요.</p>';return}
@@ -219,10 +242,16 @@ function renderCenters(){
       const v=`${y}-${String(i+1).padStart(2,'0')}`;
       return `<option value="${v}" ${c.start_month===v?'selected':''}>${i+1}월 개강</option>`;
     })).join('');
+  // 명단에 있으나 한 번도 보고 없는 센터
+  const never=(ROSTER?ROSTER.centers:[]).filter(x=>x.missed_blocks===null);
+  const sosPanel=never.length?`<div class="sos-panel"><h4>🚨 아직 한 번도 보고하지 않은 센터 ${never.length}곳</h4>`+
+    never.map(x=>`<div class="sos-row">· ${x.label} <span style="color:var(--muted)">(${+x.start_month.split('-')[1]}월 방)</span></div>`).join('')+
+    `</div>`:'';
   return `<h2>센터별 출결 현황 <span style="font-size:13px;color:var(--muted);font-family:'Malgun Gothic'">센터를 누르면 상세가 열립니다. 개강월은 각 카드에서 지정하세요</span></h2>
+  ${sosPanel}
   <div class="center-list">`+cs.map(c=>`
-    <div class="center-item" onclick="openCenter('${c.gisu}','${c.center}')">
-      <div><div class="nm">${c.center} <span class="gisu-badge">${c.gisu}기</span> <span style="font-weight:400;color:var(--muted);font-size:13px">· 강사 ${c.instructor} · 전도사 ${c.evangelists}명</span></div>
+    <div class="center-item${(x=>x&&(x.missed_blocks===null||x.missed_blocks>=2))(sosOf(c.center,c.gisu))?' emergency':''}" onclick="openCenter('${c.gisu}','${c.center}')">
+      <div><div class="nm">${c.center} <span class="gisu-badge">${c.gisu}기</span>${sosBadge(sosOf(c.center,c.gisu))} <span style="font-weight:400;color:var(--muted);font-size:13px">· 강사 ${c.instructor} · 전도사 ${c.evangelists}명</span></div>
       <div class="meta">최근 ${fmtDate(c.date)} · ${lec(c)} · 실강 ${c.live} + 보강 ${c.makeup} = ${c.attendance}/${c.registered} · 보고 ${c.n_reports}회</div>
       ${c.groups&&c.groups.length?`<div class="meta" style="margin-top:6px">${c.groups.map(g=>
         `<span class="group-chip">${g.name} <b class="rate">${pct(g.rate)}</b> <span style="color:var(--muted)">(${g.attendance}/${g.registered})</span></span>`).join('')}</div>`:''}
