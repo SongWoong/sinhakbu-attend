@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>통합 일일보고 · 출석 현황</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="./static_data.js"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+<style>
+:root{
+  --bg:#f6f1e7; --card:#fffdf8; --line:#e3dccb; --ink:#22301f;
+  --green:#1f4d36; --green-soft:#e8efe7; --accent:#274d85;
+  --yellow:#fdf6d8; --yellow-line:#efe3ae; --pink:#fbeef2; --pink-line:#eed3dc;
+  --grey:#f1efe9; --red:#b3402f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;word-break:keep-all}
+.wrap{max-width:1160px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  border-bottom:3px double var(--green);padding-bottom:14px}
+h1{font-family:"Batang","Noto Serif KR",serif;color:var(--green);font-size:26px;margin:0}
+.sub{color:#7a745f;font-size:13px;margin-top:4px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+  background:#fff;padding:9px 16px;font-size:14px}
+.btn-primary{background:#1e3a8a;border-color:#1e3a8a;color:#fff;font-weight:700}
+.nav{display:flex;gap:8px;margin-top:18px;border-bottom:1px solid var(--line);padding-bottom:0}
+.nav-btn{border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;
+  background:#efe9db;padding:11px 22px;font-size:15px;color:#6b654f}
+.nav-btn.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+.tabs{display:flex;gap:10px;margin:26px 0 6px;flex-wrap:wrap}
+.tab{border-radius:999px;padding:10px 20px;border:1px solid var(--line);background:#fff;
+  font-size:15px}
+.tab.on{background:var(--green);color:#fff;border-color:var(--green);font-weight:700}
+h2{font-family:"Batang","Noto Serif KR",serif;color:var(--green);font-size:19px;
+  margin:34px 0 14px;display:flex;align-items:center;gap:14px}
+h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;border-radius:0;padding:9px 18px}
+.seg button.on{background:var(--green);color:#fff;font-weight:700}
+select,input[type=date]{font:inherit;padding:9px 12px;border:1px solid var(--line);
+  border-radius:8px;background:#fff}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.card .num{font-family:"Batang",serif;font-size:30px;font-weight:700;color:var(--green)}
+.card .num small{font-size:16px;color:#8a8471;font-weight:400}
+.card .lab{color:#7a745f;font-size:13px;margin-top:6px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;overflow-x:auto}
+.panel h3{text-align:center;color:var(--accent);font-size:16px;margin:2px 0 16px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:680px}
+th,td{border:1px solid #d8d2c2;padding:10px 12px;text-align:center}
+th{background:var(--grey);font-weight:700}
+th.y,td.y{background:var(--yellow);border-color:var(--yellow-line)}
+th.p,td.p{background:var(--pink);border-color:var(--pink-line)}
+td.name{font-weight:700}
+td .small{display:block;font-weight:400;color:#8a8471;font-size:12px;margin-top:2px}
+tr.total td{background:#f3f1ea;font-weight:700}
+tr.total td.y{background:#faf0c0}
+tr.total td.p{background:#f6dfe7}
+tr.gisu-head td{background:var(--green-soft);font-weight:700;text-align:left;color:var(--green)}
+.rate{color:var(--accent);font-weight:700}
+.center-list{display:flex;flex-direction:column;gap:12px}
+.center-item{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .15s}
+.center-item:hover{border-color:var(--green)}
+.center-item .nm{font-size:17px;font-weight:700}
+.center-item .meta{color:#7a745f;font-size:13px;margin-top:4px}
+.center-item .rt{font-family:"Batang",serif;font-size:24px;font-weight:700;color:var(--green);text-align:right}
+.center-item .rt small{display:block;font-size:12px;color:#7a745f;font-family:inherit;font-weight:400}
+.group-chip{display:inline-block;background:var(--green-soft);border:1px solid #d5e2d4;
+  border-radius:8px;padding:4px 10px;margin-right:8px;font-size:13px;color:var(--ink)}
+.status-chips{display:flex;flex-wrap:wrap;gap:8px}
+.st-chip{border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;border:1px solid}
+.st-chip.ok{background:var(--green-soft);color:var(--green);border-color:#cfdfd0}
+.st-chip.no{background:#fbe9e5;color:var(--red);border-color:#efd0c8}
+@media (max-width:720px){ .nav{overflow-x:auto} .nav-btn{white-space:nowrap;padding:10px 14px;font-size:14px} }
+.gisu-badge{display:inline-block;background:var(--green-soft);color:var(--green);
+  border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
+.back{display:inline-block;margin:22px 0 4px;color:var(--ink);text-decoration:none;font-size:15px}
+.back:hover{color:var(--green)}
+.note{color:#7a745f;font-size:13px;margin-top:10px}
+.footer{text-align:center;color:#8a8471;font-size:13px;margin-top:48px}
+.msg{padding:10px 14px;border-radius:8px;font-size:14px;margin:14px 0;display:none}
+.msg.ok{display:block;background:var(--green-soft);color:var(--green)}
+.msg.err{display:block;background:#fbe9e5;color:var(--red)}
+.mono-cell{font-size:13px}
+.cellrate{font-weight:700;color:var(--accent)}
+.cellsub{font-size:11px;color:#8a8471}
+.chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.legend{display:flex;gap:18px;font-size:13px;color:#5c5646;margin-bottom:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:#f8f5ec}
+tr.clickable:hover td.y{background:#f8efc5}
+tr.clickable:hover td.p{background:#f7e4ea}
+@media (max-width:720px){ header{flex-direction:column;align-items:flex-start} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>통합 일일보고 · 출석 현황</h1>
+      <div class="sub">텔레그램 방에 엑셀을 올리면 자동 반영됩니다</div>
+    </div>
+    <div class="toolbar" id="toolbar">
+      <input type="file" id="file" accept=".xlsx,.xlsm" multiple style="display:none">
+      <button class="btn-primary" onclick="document.getElementById('file').click()">엑셀 업로드</button>
+      <button onclick="loadAll()">새로고침</button>
+    </div>
+  </header>
+  <nav class="nav">
+    <button class="nav-btn" data-v="dash" onclick="go('dash')">전체 대시보드</button>
+    <button class="nav-btn" data-v="monthly" onclick="go('monthly')">달별 출결 현황</button>
+    <button class="nav-btn" data-v="centers" onclick="go('centers')">센터별 출결 현황</button>
+  </nav>
+  <div id="msg" class="msg"></div>
+  <div id="app"></div>
+  <div class="footer">이 출석부는 공유 저장소(SQLite)에 기록됩니다. 텔레그램 방에 올라온 보고는 봇이 자동 반영합니다.</div>
+</div>
+<script>
+let META=null;
+let state={month:null, mode:'date', date:null, lecture:null, view:'dash', gisu:null, center:null, reportId:null};
+function go(v){state.view=v;render()}
+
+const pct=v=>v.toFixed(1)+'%';
+const lec=r=>r.lecture_label||(r.lecture_no!=null?r.lecture_no+'강':'-');
+const $=id=>document.getElementById(id);
+function msg(t,ok){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');
+  setTimeout(()=>{m.className='msg'},6000)}
+
+async function api(u){
+  if(window.STATIC){
+    const d=window.STATIC.data[u];
+    if(d===undefined)throw new Error('정적 페이지에 없는 데이터입니다');
+    return JSON.parse(JSON.stringify(d));
+  }
+  const r=await fetch(u);if(!r.ok)throw new Error((await r.json()).detail||r.status);return r.json()
+}
+if(window.STATIC){
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('toolbar').style.display='none';
+    const sub=document.querySelector('.sub');
+    if(sub)sub.textContent='열람 전용 · 마지막 갱신 '+window.STATIC.generated;
+  });
+}
+
+$('file').addEventListener('change',async e=>{
+  let okCnt=0, fails=[];
+  for(const f of e.target.files){
+    const fd=new FormData();fd.append('file',f);
+    try{
+      const r=await fetch('/api/upload',{method:'POST',body:fd});
+      const j=await r.json();
+      if(!r.ok)throw new Error(j.detail||'실패');
+      okCnt+=j.saved.length;
+    }catch(err){fails.push(`${f.name}: ${err.message}`)}
+  }
+  e.target.value='';
+  if(fails.length)msg(`반영 ${okCnt}건 / 실패: ${fails.join(' · ')}`,false);
+  else msg(`보고 ${okCnt}건 반영 완료`,true);
+  loadAll();
+});
+
+function applyHash(){
+  const h=decodeURIComponent(location.hash.slice(1));
+  if(!h)return;
+  const p=h.split('/');
+  if(p[0]==='monthly'){state.view='monthly';if(p[1])state.cohort=p[1];}
+  else if(p[0]==='centers')state.view='centers';
+  else if(p[0]==='center'&&p[2]){state.view='center';state.gisu=p[1];state.center=p[2];}
+  else if(p[0]==='dash')state.view='dash';
+}
+async function loadAll(){
+  META=await api('/api/meta');
+  TREND={};
+  applyHash();
+  if(!META.months.length){$('app').innerHTML='<p class="note" style="margin-top:40px">아직 데이터가 없습니다. 엑셀을 업로드해 주세요.</p>';return}
+  render();
+}
+
+async function render(){
+  if(!META.months.includes(state.month))state.month=META.months[META.months.length-1];
+  let html='';
+  if(state.view==='center')html=await renderCenter();
+  else if(state.view==='monthly')html=await renderMonthly();
+  else if(state.view==='centers')html=renderCenters();
+  else html=renderDashboard();
+  $('app').innerHTML=html;
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    const v=b.dataset.v;
+    b.classList.toggle('on', v===state.view || (v==='centers'&&state.view==='center'));
+  });
+  if(state.view==='center')drawChart();
+  else if(state.view==='dash')drawMonthChart();
+  else if(state.view==='monthly')drawTrendChart(state.cohort);
+}
+
+/* ---------- 센터별 출결 현황 (목록) ---------- */
+function renderCenters(){
+  const cs=META.centers;
+  const y=(META.months[META.months.length-1]||'2026-08').slice(0,4);
+  const monthOpts=c=>['<option value="">개강월 미지정</option>']
+    .concat(Array.from({length:12},(_,i)=>{
+      const v=`${y}-${String(i+1).padStart(2,'0')}`;
+      return `<option value="${v}" ${c.start_month===v?'selected':''}>${i+1}월 개강</option>`;
+    })).join('');
+  return `<h2>센터별 출결 현황 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">센터를 누르면 상세가 열립니다. 개강월은 각 카드에서 지정하세요</span></h2>
+  <div class="center-list">`+cs.map(c=>`
+    <div class="center-item" onclick="openCenter('${c.gisu}','${c.center}')">
+      <div><div class="nm">${c.center} <span class="gisu-badge">${c.gisu}기</span> <span style="font-weight:400;color:#7a745f;font-size:13px">· 강사 ${c.instructor} · 전도사 ${c.evangelists}명</span></div>
+      <div class="meta">최근 ${fmtDate(c.date)} · ${lec(c)} · 실강 ${c.live} + 보강 ${c.makeup} = ${c.attendance}/${c.registered} · 보고 ${c.n_reports}회</div>
+      ${c.groups&&c.groups.length?`<div class="meta" style="margin-top:6px">${c.groups.map(g=>
+        `<span class="group-chip">${g.name} <b class="rate">${pct(g.rate)}</b> <span style="color:#8a8471">(${g.attendance}/${g.registered})</span></span>`).join('')}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        ${window.STATIC
+          ?`<span class="gisu-badge">${c.start_month?fmtCohort(c.start_month):'개강월 미지정'}</span>`
+          :`<select onclick="event.stopPropagation()" onchange="event.stopPropagation();setCourseMonth('${c.center}','${c.gisu}',this.value)"
+          style="font-size:13px;padding:6px 8px">${monthOpts(c)}</select>`}
+        <div class="rt">${pct(c.rate)}<small>최근 출석률</small></div>
+      </div>
+    </div>`).join('')+`</div>`;
+}
+
+/* ---------- 전체 대시보드 (모든 기수 합산) ---------- */
+function aggCenters(list){
+  const t={centers:list.length,registered:0,live:0,makeup:0,attendance:0,target_final:0,evangelism:0,visits:0};
+  list.forEach(c=>{t.registered+=c.registered;t.live+=c.live;t.makeup+=c.makeup;
+    t.attendance+=c.attendance;t.target_final+=c.target_final;t.evangelism+=c.evangelism;
+    t.visits+=c.instructor_visits||0});
+  t.live_rate=t.registered?t.live/t.registered*100:0;
+  t.rate=t.registered?t.attendance/t.registered*100:0;
+  t.target_rate=t.registered?t.target_final/t.registered*100:0;
+  return t;
+}
+function renderDashboard(){
+  const cs=META.centers;
+  const lastDate=META.dates[META.dates.length-1];
+  const total=aggCenters(cs);
+  return `<h2>전체 대시보드 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">전 센터 합산 · 센터별 최근 보고 기준</span></h2>
+  <div class="cards">
+    <div class="card"><div class="num">${pct(total.rate)}</div><div class="lab">전체 출석률 (실강 ${total.live} + 보강 ${total.makeup} = ${total.attendance}/${total.registered})</div></div>
+    <div class="card"><div class="num">${total.attendance} <small>/ ${total.registered}</small></div><div class="lab">출석 / 총등록</div></div>
+    <div class="card"><div class="num">${cs.length} <small>센터</small></div><div class="lab">운영 중 · 최근 보고 ${fmtDate(lastDate,true)}</div></div>
+  </div>
+  <div class="panel">
+    <table style="min-width:0">
+    <tr><th>센터 수</th><th>총등록</th><th>실강<br>출석수</th><th>보강<br>출석수</th><th>출석수<br>(계)</th>
+        <th>실강<br>출석률</th><th>출석률</th><th class="y">목표<br>종강률</th><th class="p">전도수</th><th class="p">강사<br>심방수</th></tr>
+    <tr class="total"><td>${total.centers}</td><td>${total.registered}</td>
+      <td>${total.live}</td><td>${total.makeup}</td><td><b>${total.attendance}</b></td>
+      <td class="rate">${pct(total.live_rate)}</td><td class="rate">${pct(total.rate)}</td>
+      <td class="y rate">${pct(total.target_rate)}</td>
+      <td class="p">${total.evangelism}</td><td class="p">${total.visits}</td></tr>
+    </table>
+  </div>
+  <h2>달별 출석률 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">개강월(텔레그램 달별 방) 기준</span></h2>
+  <div class="chart-wrap"><div id="month-chart"></div></div>
+  <div class="note">각 강의의 개강월은 "센터별 출결 현황"에서 지정합니다. 지정 전에는 "개강월 미지정"으로 묶입니다.</div>`;
+}
+
+/* ---------- 출석률 추이 (달별, 개강월 필터 가능) ---------- */
+let TREND={};
+async function drawTrendChart(cohort){
+  const el=$('trend-chart');if(!el)return;
+  const key=cohort||'all';
+  if(!TREND[key])TREND[key]=(await api('/api/trend'+(cohort?'?start_month='+encodeURIComponent(cohort):''))).days;
+  // 날짜별 이어붙이기 시계열에서 "각 달의 마지막 날" 값만 추출 → 달별 추이
+  const byMonth={};
+  TREND[key].forEach(x=>{byMonth[x.date.slice(0,7)]=x});  // 날짜 오름차순이라 마지막 값이 남음
+  const data=Object.entries(byMonth).sort((a,b)=>a[0]<b[0]?-1:1)
+    .map(([m,x])=>({label:`${+m.split('-')[1]}월`, ...x}));
+  if(!data.length){el.innerHTML='<p class="note">데이터가 없습니다.</p>';return}
+  const W=Math.max(el.clientWidth||900,480),H=300,L=52,R=24,T=30,B=44;
+  const hi=Math.min(100,Math.ceil(Math.max(...data.map(d=>d.rate),10)/10)*10+10);
+  const Y=v=>T+(H-T-B)*(1-v/hi);
+  const slot=(W-L-R)/data.length;
+  const bw=Math.min(56,slot*0.28);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%">`;
+  for(let v=0;v<=hi;v+=10){
+    s+=`<line x1="${L}" y1="${Y(v)}" x2="${W-R}" y2="${Y(v)}" stroke="#e7e1d2"/>`+
+       `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="#8a8471">${v}%</text>`;
+  }
+  data.forEach((d,i)=>{
+    const cx=L+slot*i+slot/2;
+    const x1=cx-bw-3, x2=cx+3;
+    s+=`<rect x="${x1}" y="${Y(d.rate)}" width="${bw}" height="${Y(0)-Y(d.rate)}" rx="4" fill="#1f4d36"><title>${d.label} 출석률 ${d.rate.toFixed(1)}% (${d.attendance}/${d.registered}, ${fmtDate(d.date,true)} 기준, ${d.reports}개 강의)</title></rect>`;
+    s+=`<text x="${x1+bw/2}" y="${Y(d.rate)-8}" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f4d36">${d.rate.toFixed(1)}%</text>`;
+    s+=`<rect x="${x2}" y="${Y(d.live_rate)}" width="${bw}" height="${Y(0)-Y(d.live_rate)}" rx="4" fill="#7ba889"><title>${d.label} 실강 출석률 ${d.live_rate.toFixed(1)}%</title></rect>`;
+    s+=`<text x="${x2+bw/2}" y="${Y(d.live_rate)-8}" text-anchor="middle" font-size="12" fill="#5c7d68">${d.live_rate.toFixed(1)}%</text>`;
+    s+=`<text x="${cx}" y="${H-18}" text-anchor="middle" font-size="13" fill="#5c5646">${d.label}</text>`;
+  });
+  s+=`<rect x="${W-R-205}" y="6" width="10" height="10" rx="2" fill="#1f4d36"/><text x="${W-R-190}" y="15" font-size="12" fill="#5c5646">출석률(실강+보강)</text>`;
+  s+=`<rect x="${W-R-80}" y="6" width="10" height="10" rx="2" fill="#7ba889"/><text x="${W-R-65}" y="15" font-size="12" fill="#5c5646">실강 출석률</text>`;
+  s+='</svg>';
+  el.innerHTML=s;
+}
+
+/* ---------- 개강월(달별) 유틸 ---------- */
+const cohortKey=c=>c.start_month||'none';
+const fmtCohort=m=>m==='none'?'개강월 미지정':`${+m.split('-')[1]}월 개강`;
+function cohortList(){
+  const ks=[...new Set(META.centers.map(cohortKey))];
+  return ks.sort((a,b)=>a==='none'?1:b==='none'?-1:a.localeCompare(b));
+}
+function cohortMembers(k){return META.centers.filter(c=>cohortKey(c)===k)}
+const memberKey=c=>String(c.gisu)+'|'+c.center;
+async function setCourseMonth(center,gisu,val){
+  await fetch('/api/course_month',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({center, gisu:String(gisu), start_month:val||null})});
+  META=await api('/api/meta');
+  render();
+}
+
+/* ---------- 달별(개강월) 출석률 막대 그래프 ---------- */
+async function drawMonthChart(){
+  const el=$('month-chart');if(!el)return;
+  const data=cohortList().map(k=>{
+    const t=aggCenters(cohortMembers(k));
+    return {key:k, label:fmtCohort(k), rate:t.rate, live_rate:t.live_rate,
+            attendance:t.attendance, registered:t.registered, reports:t.centers};
+  });
+  if(!data.length){el.innerHTML='<p class="note">데이터가 없습니다.</p>';return}
+  const W=Math.max(el.clientWidth||900,480),H=300,L=52,R=24,T=30,B=44;
+  const hi=Math.min(100,Math.ceil(Math.max(...data.map(d=>d.rate),10)/10)*10+10);
+  const Y=v=>T+(H-T-B)*(1-v/hi);
+  const slot=(W-L-R)/data.length;
+  const bw=Math.min(56,slot*0.28);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%">`;
+  for(let v=0;v<=hi;v+=10){
+    s+=`<line x1="${L}" y1="${Y(v)}" x2="${W-R}" y2="${Y(v)}" stroke="#e7e1d2"/>`+
+       `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="#8a8471">${v}%</text>`;
+  }
+  data.forEach((d,i)=>{
+    const cx=L+slot*i+slot/2;
+    const x1=cx-bw-3, x2=cx+3;
+    s+=`<rect x="${x1}" y="${Y(d.rate)}" width="${bw}" height="${Y(0)-Y(d.rate)}" rx="4" fill="#1f4d36"><title>${d.label} 출석률 ${d.rate.toFixed(1)}% (${d.attendance}/${d.registered}, 강의 ${d.reports}개)</title></rect>`;
+    s+=`<text x="${x1+bw/2}" y="${Y(d.rate)-8}" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f4d36">${d.rate.toFixed(1)}%</text>`;
+    s+=`<rect x="${x2}" y="${Y(d.live_rate)}" width="${bw}" height="${Y(0)-Y(d.live_rate)}" rx="4" fill="#7ba889"><title>${d.label} 실강 출석률 ${d.live_rate.toFixed(1)}%</title></rect>`;
+    s+=`<text x="${x2+bw/2}" y="${Y(d.live_rate)-8}" text-anchor="middle" font-size="12" fill="#5c7d68">${d.live_rate.toFixed(1)}%</text>`;
+    s+=`<text x="${cx}" y="${H-18}" text-anchor="middle" font-size="13" fill="#5c5646">${d.label}</text>`;
+  });
+  s+=`<rect x="${W-R-190}" y="6" width="10" height="10" rx="2" fill="#1f4d36"/><text x="${W-R-175}" y="15" font-size="12" fill="#5c5646">출석률(실강+보강)</text>`;
+  s+=`<rect x="${W-R-78}" y="6" width="10" height="10" rx="2" fill="#7ba889"/><text x="${W-R-63}" y="15" font-size="12" fill="#5c5646">실강 출석률</text>`;
+  s+='</svg>';
+  el.innerHTML=s;
+}
+
+/* ---------- 달별(개강월) 출결 현황 ---------- */
+async function renderMonthly(){
+  const ks=cohortList();
+  if(!ks.includes(state.cohort))state.cohort=ks[0];
+  const memb=new Set(cohortMembers(state.cohort).map(memberKey));
+  const inCohort=r=>memb.has(String(r.gisu)+'|'+r.center);
+  let html=`<h2>달별 출결 현황 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">텔레그램 달별 방(개강월) 기준</span></h2>
+  <div class="tabs">`+ks.map(k=>
+    `<button class="tab ${k===state.cohort?'on':''}" onclick="state.cohort='${k}';render()">${fmtCohort(k)} (${cohortMembers(k).length})</button>`).join('')+`</div>`;
+
+  const agg=aggCenters(cohortMembers(state.cohort));
+  let reports, selHtml;
+  if(state.mode==='date'){
+    if(!META.dates.includes(state.date))state.date=META.dates[META.dates.length-1];
+    reports=(await api(`/api/daily?date=${state.date}`)).reports.filter(inCohort);
+    selHtml=`<select onchange="state.date=this.value;render()">${META.dates.map(d=>`<option value="${d}" ${d===state.date?'selected':''}>${fmtDate(d)}</option>`).join('')}</select>`;
+  }else{
+    const ls=(await api('/api/lectures')).lectures;
+    if(!ls.includes(state.lecture))state.lecture=ls[ls.length-1];
+    reports=(await api(`/api/lecture?lecture_no=${state.lecture}`)).reports.filter(inCohort);
+    selHtml=`<select onchange="state.lecture=+this.value;render()">${ls.map(l=>`<option value="${l}" ${l===state.lecture?'selected':''}>${l}강</option>`).join('')}</select>`;
+  }
+  const t=sumUp(reports);
+
+  html+=`<div class="cards">
+    <div class="card"><div class="num">${pct(agg.rate)}</div><div class="lab">${fmtCohort(state.cohort)} 출석률 · 강의 ${agg.centers}개 최근 보고 합산 (${agg.attendance}/${agg.registered})</div></div>
+    <div class="card"><div class="num">${agg.live} <small>+ ${agg.makeup}</small></div><div class="lab">실강 + 보강</div></div>
+    <div class="card"><div class="num">${pct(agg.target_rate)}</div><div class="lab">목표 종강률</div></div>
+  </div>
+  <div class="controls">
+    <div class="seg">
+      <button class="${state.mode==='date'?'on':''}" onclick="state.mode='date';render()">날짜별</button>
+      <button class="${state.mode==='lecture'?'on':''}" onclick="state.mode='lecture';render()">강별</button>
+    </div>${selHtml}
+  </div>
+  <div class="panel">
+    <h3>${fmtCohort(state.cohort)} 일일보고 (${state.mode==='date'?fmtDate(state.date):state.lecture+'강'})</h3>
+    ${mainTable(reports,t)}
+  </div>`;
+
+  html+=`<h2>출석률 추이 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">${fmtCohort(state.cohort)} 강의 합산 · 달별 (각 달 마지막 보고 기준, 진행 중인 달은 최신)</span></h2>
+  <div class="chart-wrap"><div id="trend-chart"></div></div>`;
+
+  const mt=await api('/api/monthly_trend');
+  const rows=mt.centers.filter(inCohort);
+  html+=`<h2>센터 × 월 추이 <span style="font-size:13px;color:#7a745f;font-family:'Malgun Gothic'">각 달 마지막 보고 기준 · 진행 중인 달은 최신 보고로 갱신</span></h2>
+  <div class="panel">${monthlyTrendTable(mt.months, rows)}</div>
+  <div class="note">각 칸: 그 달 마지막 보고의 출석률(실강+보강)과 보고 날짜입니다. 행을 누르면 센터 상세로 이동합니다.</div>`;
+  return html;
+}
+
+function monthlyTrendTable(months, rows){
+  if(!rows.length)return '<p class="note">이 개강월의 강의가 없습니다.</p>';
+  return `<table>
+  <tr><th style="min-width:110px">센터</th><th>기수</th>${months.map(m=>`<th>${+m.split('-')[1]}월</th>`).join('')}</tr>
+  ${rows.map(c=>{
+    let prev=null;
+    const cells=months.map(m=>{
+      const x=c.cells[m];
+      if(!x){prev=null;return '<td class="mono-cell" style="color:#c9c2ae">-</td>'}
+      let arrow='';
+      if(prev!=null){
+        const d=x.rate-prev;
+        if(Math.abs(d)>=0.05)arrow=`<span style="font-size:10px;color:${d>=0?'#1f4d36':'#b3402f'}"> ${d>=0?'▲':'▼'}${Math.abs(d).toFixed(1)}</span>`;
+      }
+      prev=x.rate;
+      return `<td class="mono-cell"><span class="cellrate">${x.rate.toFixed(1)}%</span>${arrow}<br><span class="cellsub">${+x.date.slice(8,10)}일 · ${x.attendance}/${x.registered}</span></td>`;
+    }).join('');
+    return `<tr class="clickable" onclick="openCenter('${c.gisu}','${c.center}')">
+      <td class="name">${c.center}</td><td><span class="gisu-badge">${c.gisu}기</span></td>${cells}</tr>`;
+  }).join('')}
+  </table>`;
+}
+
+function sumUp(reports){
+  const t={registered:0,live:0,makeup:0,attendance:0,target_final:0,evangelism:0,visits:0};
+  reports.forEach(r=>{t.registered+=r.registered;t.live+=r.live;t.makeup+=r.makeup;
+    t.attendance+=r.attendance;t.target_final+=r.target_final;t.evangelism+=r.evangelism;
+    t.visits+=r.instructor_visits||0});
+  t.live_rate=t.registered?t.live/t.registered*100:0;
+  t.rate=t.registered?t.attendance/t.registered*100:0;
+  t.target_rate=t.registered?t.target_final/t.registered*100:0;
+  return t;
+}
+
+function mainTable(reports,t){
+  if(!reports.length)return '<p class="note">해당 조건의 보고가 없습니다.</p>';
+  return `<table>
+  <tr><th>센터</th><th>기수</th><th>총등록</th><th>실강<br>출석수</th><th>보강<br>출석수</th><th>출석수<br>(계)</th>
+      <th>실강<br>출석률</th><th>출석률</th>
+      <th class="y">목표<br>종강수</th><th class="y">목표<br>종강률</th><th class="p">전도수</th><th class="p">강사<br>심방수</th></tr>
+  ${reports.map(r=>`<tr class="clickable" onclick="openCenter('${r.gisu}','${r.center}')">
+    <td class="name">${r.center}<span class="small">${lec(r)} · ${r.instructor}</span></td>
+    <td><span class="gisu-badge">${r.gisu}기</span></td>
+    <td>${r.registered}</td><td>${r.live}</td><td>${r.makeup}</td><td><b>${r.attendance}</b></td>
+    <td class="rate">${pct(r.live_rate)}</td><td class="rate">${pct(r.rate)}</td>
+    <td class="y">${r.target_final}</td><td class="y rate">${pct(r.target_rate)}</td>
+    <td class="p">${r.evangelism}</td><td class="p">${r.instructor_visits??'-'}</td></tr>`).join('')}
+  <tr class="total"><td>계</td><td></td><td>${t.registered}</td><td>${t.live}</td><td>${t.makeup}</td><td>${t.attendance}</td>
+    <td class="rate">${pct(t.live_rate)}</td><td class="rate">${pct(t.rate)}</td>
+    <td class="y">${t.target_final}</td><td class="y rate">${pct(t.target_rate)}</td>
+    <td class="p">${t.evangelism}</td><td class="p">${t.visits}</td></tr>
+  </table>`;
+}
+
+function monthlyTable(m){
+  if(!m.centers.length)return '<p class="note">이 달의 보고가 없습니다.</p>';
+  return `<table>
+  <tr><th style="min-width:110px">센터</th><th>기수</th>${m.days.map(d=>`<th>${d}일</th>`).join('')}
+      <th class="y">월평균<br>출석률</th><th class="y">월평균<br>실강률</th></tr>
+  ${m.centers.map(c=>`<tr class="clickable" onclick="openCenter('${c.gisu}','${c.center}')"><td class="name">${c.center}</td>
+    <td><span class="gisu-badge">${c.gisu}기</span></td>
+    ${m.days.map(d=>{const x=c.cells[d];
+      return x?`<td class="mono-cell"><span class="cellrate">${x.rate.toFixed(1)}%</span><br><span class="cellsub">${x.live}+${x.makeup}</span></td>`:'<td class="mono-cell" style="color:#c9c2ae">-</td>'}).join('')}
+    <td class="y rate">${pct(c.avg_rate)}</td><td class="y rate">${pct(c.avg_live_rate)}</td></tr>`).join('')}
+  </table>`;
+}
+
+/* ---------- 센터 상세 ---------- */
+function openCenter(gisu,name){state.view='center';state.gisu=gisu;state.center=name;state.reportId=null;render()}
+
+let CHART=null;
+async function renderCenter(){
+  const h=(await api(`/api/center?gisu=${state.gisu}&center=${encodeURIComponent(state.center)}`)).history;
+  if(!h.length)return '<p class="note">보고가 없습니다.</p>';
+  if(!h.some(x=>x.report_id===state.reportId))state.reportId=h[h.length-1].report_id;
+  const det=await api(`/api/report?id=${state.reportId}`);
+  const s=det.summary;
+  // 추이 차트는 강별 최종 보고만 사용 (월·화 누적 중간치 제외)
+  const finals={};
+  h.forEach(x=>{finals[x.lecture_no!=null?'L'+x.lecture_no:x.date]=x});
+  const hh=Object.values(finals).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  CHART={history:hh,target:s.target_rate};
+  const first=hh[0], diff=(hh[hh.length-1].rate-first.rate);
+  const groups={};
+  det.rows.forEach(r=>{(groups[r.class_group||'']=groups[r.class_group||'']||[]).push(r)});
+  const gt=sumRows(det.rows);
+  let rowsHtml='';
+  for(const [gname,rows] of Object.entries(groups)){
+    if(gname)rowsHtml+=`<tr><td colspan="11" style="background:var(--green-soft);font-weight:700;text-align:left">${gname}</td></tr>`;
+    rowsHtml+=rows.map(r=>`<tr>
+      <td class="name">${r.name}</td><td>${r.registered}</td><td>${r.live}</td><td>${r.makeup}</td><td><b>${r.attendance}</b></td>
+      <td class="rate">${pct(r.live_rate)}</td><td class="rate">${pct(r.rate)}</td>
+      <td class="y">${r.target_final}</td><td class="y rate">${pct(r.target_rate)}</td>
+      <td class="p">${r.evangelism_target}</td><td class="p">${r.evangelism}</td></tr>`).join('');
+    if(gname){
+      const st=sumRows(rows);
+      rowsHtml+=`<tr style="font-weight:700;background:#f6f3e9">
+        <td>${gname} 계</td><td>${st.registered}</td><td>${st.live}</td><td>${st.makeup}</td><td>${st.attendance}</td>
+        <td class="rate">${pct(st.live_rate)}</td><td class="rate">${pct(st.rate)}</td>
+        <td class="y">${st.target_final}</td><td class="y rate">${pct(st.target_rate)}</td>
+        <td class="p">${st.evangelism_target}</td><td class="p">${st.evangelism}</td></tr>`;
+    }
+  }
+  return `<a class="back" href="javascript:void(0)" onclick="go('centers')">← 센터별 출결 현황</a>
+  <h2 style="margin-top:10px">${state.center} <span style="font-size:14px;color:#7a745f;font-family:'Malgun Gothic'">· ${state.gisu}기 · 강사 ${s.instructor} · 전도사 ${det.rows.length}명</span></h2>
+  <div class="controls">
+    <select onchange="state.reportId=+this.value;render()">
+      ${h.map(x=>`<option value="${x.report_id}" ${x.report_id===state.reportId?'selected':''}>${lec(x)} · ${fmtDate(x.date)}</option>`).join('')}
+    </select>
+  </div>
+  <div class="panel">
+    <h3>${state.center} ${state.gisu}기 일일보고 (${fmtDate(s.date)}) ${lec(s)}</h3>
+    <div style="font-size:14px;margin-bottom:12px"><b>강사 : ${s.instructor}</b> &nbsp;·&nbsp; 총등록 : <b>${s.registered}</b> &nbsp;·&nbsp; 출석 : <b>${s.attendance}</b> (실강 ${s.live} + 보강 ${s.makeup}) &nbsp;·&nbsp; 강사 심방수 : <b>${s.instructor_visits??'-'}</b></div>
+    <table>
+    <tr><th>전도사</th><th>총등록</th><th>실강<br>출석수</th><th>보강<br>출석수</th><th>출석수<br>(계)</th>
+        <th>실강<br>출석률</th><th>출석률</th><th class="y">목표<br>종강수</th><th class="y">목표<br>종강률</th>
+        <th class="p">전도<br>목표수</th><th class="p">전도수</th></tr>
+    ${rowsHtml}
+    <tr class="total"><td>계</td><td>${gt.registered}</td><td>${gt.live}</td><td>${gt.makeup}</td><td>${gt.attendance}</td>
+      <td class="rate">${pct(gt.live_rate)}</td><td class="rate">${pct(gt.rate)}</td>
+      <td class="y">${gt.target_final}</td><td class="y rate">${pct(gt.target_rate)}</td>
+      <td class="p">${gt.evangelism_target}</td><td class="p">${gt.evangelism}</td></tr>
+    </table>
+  </div>
+  <h2>출석률 추이</h2>
+  <div class="chart-wrap">
+    <div class="legend">
+      첫 보고 대비 <b style="color:${diff>=0?'var(--green)':'var(--red)'}">&nbsp;${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}%p</b>
+      <span><i style="background:var(--green)"></i>출석률(실강+보강)</span>
+      <span><i style="background:#7ba889"></i>실강 출석률</span>
+      <span><i style="background:var(--red);height:0;border-top:2px dashed var(--red)"></i>목표 종강률 ${pct(s.target_rate)}</span>
+    </div>
+    <div id="chart"></div>
+  </div>`;
+}
+
+function sumRows(rows){
+  const t={registered:0,live:0,makeup:0,attendance:0,target_final:0,evangelism_target:0,evangelism:0};
+  rows.forEach(r=>{for(const k in t)t[k]+=r[k]});
+  t.live_rate=t.registered?t.live/t.registered*100:0;
+  t.rate=t.registered?t.attendance/t.registered*100:0;
+  t.target_rate=t.registered?t.target_final/t.registered*100:0;
+  return t;
+}
+
+function drawChart(){
+  const el=$('chart');if(!el||!CHART)return;
+  const h=CHART.history, target=CHART.target;
+  const W=Math.max(el.clientWidth||900,480),H=280,L=52,R=24,T=18,B=46;
+  const ys=h.map(x=>x.rate).concat(h.map(x=>x.live_rate),[target]);
+  let lo=Math.floor(Math.min(...ys)/10)*10-10, hi=Math.ceil(Math.max(...ys)/10)*10+10;
+  lo=Math.max(0,lo);hi=Math.min(100,hi);
+  const X=i=>h.length===1?(L+(W-L-R)/2):L+(W-L-R)*i/(h.length-1);
+  const Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%">`;
+  for(let v=Math.ceil(lo/10)*10;v<=hi;v+=10){
+    s+=`<line x1="${L}" y1="${Y(v)}" x2="${W-R}" y2="${Y(v)}" stroke="#e7e1d2"/>`+
+       `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="#8a8471">${v}%</text>`;
+  }
+  s+=`<line x1="${L}" y1="${Y(target)}" x2="${W-R}" y2="${Y(target)}" stroke="#b3402f" stroke-dasharray="7 5" stroke-width="2"/>`;
+  s+=`<text x="${W-R}" y="${Y(target)-8}" text-anchor="end" font-size="13" font-weight="bold" fill="#b3402f">목표 종강률 ${target.toFixed(1)}%</text>`;
+  // 보고가 많으면 라벨과 축 표기를 솎아낸다 (겹침 방지)
+  const every=Math.max(1,Math.ceil(h.length/12));
+  const showLabel=i=>i%every===0||i===h.length-1;
+  const r=h.length>20?3:4.5;
+  const path=(key,color,wd,labels)=>{
+    let p=h.map((x,i)=>`${i?'L':'M'}${X(i)},${Y(x[key])}`).join(' ');
+    let out=`<path d="${p}" fill="none" stroke="${color}" stroke-width="${wd}"/>`;
+    h.forEach((x,i)=>{out+=`<circle cx="${X(i)}" cy="${Y(x[key])}" r="${r}" fill="${color}"><title>${lec(x)} ${fmtDate(x.date,true)} ${x[key].toFixed(1)}%</title></circle>`;
+      if(labels&&showLabel(i))out+=`<text x="${X(i)}" y="${Y(x[key])-11}" text-anchor="middle" font-size="12.5" font-weight="bold" fill="${color}">${x[key].toFixed(1)}%</text>`});
+    return out;
+  };
+  s+=path('live_rate','#7ba889',2,h.length<=20);
+  s+=path('rate','#1f4d36',3,true);
+  h.forEach((x,i)=>{if(!showLabel(i))return;
+    s+=`<text x="${X(i)}" y="${H-24}" text-anchor="middle" font-size="12.5" fill="#5c5646">${lec(x)}</text>`+
+    `<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="12" fill="#a29a83">${fmtDate(x.date,true)}</text>`});
+  s+='</svg>';el.innerHTML=s;
+}
+
+function fmtDate(d,short){
+  const [y,m,dd]=d.split('-').map(Number);
+  const dt=new Date(y,m-1,dd);
+  const dow='일월화수목금토'[dt.getDay()];
+  return short?`${m}월 ${dd}일`:`${m}월 ${dd}일 (${dow})`;
+}
+function fmtMonth(m){const [y,mm]=m.split('-');return `${y}년 ${+mm}월`}
+window.addEventListener('resize',()=>{if(state.view==='center')drawChart();else if(state.view==='dash')drawMonthChart();else if(state.view==='monthly')drawTrendChart(state.cohort)});
+loadAll();
+</script>
+</body>
+</html>
