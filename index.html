@@ -219,21 +219,32 @@ async function loadAll(){
   render();
 }
 
+let CURRENT_VIEW='dash';   // 마지막으로 화면에 실제로 그려진 뷰
 async function render(){
-  if(!META.months.includes(state.month))state.month=META.months[META.months.length-1];
-  let html='';
-  if(state.view==='center')html=await renderCenter();
-  else if(state.view==='monthly')html=await renderMonthly();
-  else if(state.view==='centers')html=renderCenters();
-  else html=renderDashboard();
-  $('app').innerHTML=html;
-  document.querySelectorAll('.nav-btn').forEach(b=>{
-    const v=b.dataset.v;
-    b.classList.toggle('on', v===state.view || (v==='centers'&&state.view==='center'));
-  });
-  if(state.view==='center')drawChart();
-  else if(state.view==='dash')drawMonthChart();
-  else if(state.view==='monthly')drawTrendChart(state.cohort);
+  const prevView=CURRENT_VIEW;
+  try{
+    if(!META.months.includes(state.month))state.month=META.months[META.months.length-1];
+    let html='';
+    if(state.view==='center')html=await renderCenter();
+    else if(state.view==='monthly')html=await renderMonthly();
+    else if(state.view==='centers')html=renderCenters();
+    else html=renderDashboard();
+    $('app').innerHTML=html;
+    CURRENT_VIEW=state.view;
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      const v=b.dataset.v;
+      b.classList.toggle('on', v===state.view || (v==='centers'&&state.view==='center'));
+    });
+    if(state.view==='center')drawChart();
+    else if(state.view==='dash')drawMonthChart();
+    else if(state.view==='monthly')drawTrendChart(state.cohort);
+  }catch(e){
+    // 불러오는 중 오류(서버 재시작 등)로 화면이 멈추지 않게: 이전 뷰로 되돌려서
+    // 버튼을 다시 누르면 재시도되게 하고, 사용자에게 알린다.
+    console.error(e);
+    state.view=prevView;
+    msg('불러오는 중 문제가 있었습니다. 버튼을 다시 눌러 주세요. ('+e.message+')', false);
+  }
 }
 
 /* ---------- 센터별 출결 현황 (목록) ---------- */
